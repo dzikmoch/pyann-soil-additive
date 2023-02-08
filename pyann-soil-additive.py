@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 import matplotlib.pyplot as plt
 from sklearn import metrics
 from sklearn.model_selection import train_test_split 
+from sklearn.preprocessing import StandardScaler, MinMaxScaler
 
 @dataclass
 class Soil():
@@ -43,7 +44,6 @@ class Ann():
     def prepare_data(self, data: pd.DataFrame) -> dict[str,np.ndarray]:
         X = data.drop(columns=['I1','O'])
         y = data['O']
-
         X_train_, X_test_, Y_train_, Y_test_ = train_test_split(X, y, test_size=self.train_size)
 
         X_train = np.transpose(X_train_.to_numpy())
@@ -119,7 +119,7 @@ def dc_plot(X: list, Y: list, save=False) -> None:
 
     plt.figure(1)
     for idx, x in enumerate(X):
-        plt.plot(x['I2'], Y[idx], color=colors[idx],marker='o',linestyle='-',lw=3,markersize=8,label=f"$\chi_cem$ = {x['chi']}\%")
+        plt.plot(x['I2'], Y[idx], color=colors[idx],marker='o',linestyle='-',lw=3,markersize=8,label=f"$\chi_cem$ = {x['chi']}%")
 
     plt.xlabel('$I_c^{**}$ $[\%]$')
     plt.ylabel('$\sigma_c$ $[kN/m^3]$')
@@ -143,8 +143,14 @@ def main() -> None:
     # create neural network
     model = Ann(n_inputs=2, n_hidden=1, n_outputs=1)
 
+    # normalize data
+    scaler = MinMaxScaler()
+    scaler.fit(data)
+    norm_feat = scaler.transform(data)
+    norm_data = pd.DataFrame(norm_feat, index=data.index, columns=data.columns)
+
     # prepare data for pyrenn neural network
-    data_nn = model.prepare_data(data)
+    data_nn = model.prepare_data(norm_data)
 
     # train neural network, save trained nn and plot performance
     model.trained_nn = model.train_ann(**data_nn['training'])
@@ -156,7 +162,17 @@ def main() -> None:
     y_dc = []
     X_dc = dc_data(soil_type=soil_type)
     for x in X_dc:
-        y_dc.append(model.predict(np.array([x['I2'],x['I3']])))
+        data_= np.array([x['I1'],x['I2'],x['I3']])
+        data__ = np.r_[data_, [np.zeros(len(data_[0]))]]
+        
+        norm_data = scaler.transform(np.transpose(data__))
+        norm_data_tr = np.transpose(norm_data)
+
+        prediction = model.predict(norm_data_tr[1:3])
+        norm_data_tr[3] = prediction
+
+        y_dc.append(np.transpose(scaler.inverse_transform(np.transpose(norm_data_tr)))[-1])
+
     dc_plot(X_dc, y_dc, True)
 
 
