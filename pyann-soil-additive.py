@@ -74,14 +74,19 @@ def error_estimators(y_train: np.ndarray, y_predict: np.ndarray) -> dict[str, fl
 
     return errors
 
-def perf_plot(y_train: np.ndarray, y_predict: np.ndarray) -> None:
+def perf_plot(y_train: np.ndarray, y_predict: np.ndarray, save=False) -> None:
     # function for plotting performance of network
     plt.figure(0)
     plt.plot(y_train,y_predict,color='r',marker='o',linestyle='',lw=3,markersize=8,label='Train Data')
     plt.xlabel('Observed $\u03C3_{c}$ ($kN/m^{3}$)')
     plt.ylabel('Predicted $\u03C3_{c}$ ($kN/m^{3}$)')
-    plt.show()
-    # plt.savefig('performance.png')
+
+    if save:
+        plt.savefig('performance.png')
+    else:
+        plt.show()
+
+    return None
 
 def dc_data(soil_type: str) -> list[dict]:
     # function for preparing data for design chart
@@ -108,7 +113,7 @@ def dc_data(soil_type: str) -> list[dict]:
 
     return data
 
-def dc_plot(X: list, Y: list) -> None:
+def dc_plot(X: list, Y: list, save=False) -> None:
     # function for preparing plot of design chart
     colors: list = ['r', 'g', 'b', 'y', 'k', 'm']
 
@@ -120,8 +125,11 @@ def dc_plot(X: list, Y: list) -> None:
     plt.ylabel('$\sigma_c$ $[kN/m^3]$')
     plt.legend(loc='upper left')
     plt.ylim((0,450))
-    plt.show()
-    # plt.savefig('design_chart.png')
+    
+    if save:
+        plt.savefig('design_chart.png')
+    else:
+        plt.show()
 
     return None
 
@@ -141,7 +149,7 @@ def main() -> None:
     # train neural network, save trained nn and plot performance
     model.trained_nn = model.train_ann(**data_nn['training'])
     y_predict = model.predict(data_nn['testing']['X'])
-    perf_plot(data_nn['testing']['Y'], y_predict)
+    perf_plot(data_nn['testing']['Y'], y_predict, True)
     print(error_estimators(data_nn['testing']['Y'], y_predict))
 
     # create design charts
@@ -149,7 +157,7 @@ def main() -> None:
     X_dc = dc_data(soil_type=soil_type)
     for x in X_dc:
         y_dc.append(model.predict(np.array([x['I2'],x['I3']])))
-    dc_plot(X_dc,y_dc)
+    dc_plot(X_dc, y_dc, True)
 
 
 if __name__ == "__main__":
